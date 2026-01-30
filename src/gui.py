@@ -140,6 +140,14 @@ class HIDConfigurator(ctk.CTk):
         self.log_window.pack(fill="both", expand=True)
         self.log_window.configure(state="disabled")
 
+        # --- Status & Progress Section ---
+        self.status_label = ctk.CTkLabel(self, text="Status: Initializing AI...", font=("Arial", 12))
+        self.status_label.pack(pady=(10, 0))
+
+        self.progress_bar = ctk.CTkProgressBar(self, width=300)
+        self.progress_bar.pack(pady=10)
+        self.progress_bar.set(0) # Start at 0%
+
         # Load initial values
         self.load_map_values(self.map_dropdown.get())
         self.load_capture_settings()
