@@ -1,0 +1,15 @@
+{
+    "last_selected_map": "default",
+    "maps": {
+        "default": {
+            "key": "f3",
+            "min_delay": 8.1,
+            "max_delay": 8.8
+        },
+        "metal": {
+            "key": "f3",
+            "min_delay": 8.0,
+            "max_delay": 9.0
+        }
+    }
+}

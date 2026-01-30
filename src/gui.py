@@ -1,0 +1,205 @@
+import customtkinter as ctk
+from datetime import datetime
+from src.config import load_config, save_config
+
+class HIDConfigurator(ctk.CTk):
+    def __init__(self, controller):
+        super().__init__()
+        self.controller = controller
+        self.title("CLAWNSEEKER // DASHBOARD")
+        
+        # Wider, shorter geometry for desktop use
+        self.geometry("900x600")
+        
+        # Color Palette
+        self.accent_color = "#1f6aa5" 
+        self.bg_color = "#1a1a1a"      
+        self.card_color = "#252525"    
+        self.text_dim = "#888888"      
+        
+        ctk.set_appearance_mode("dark")
+        self.configure(fg_color=self.bg_color)
+
+        self.config_data = load_config()
+
+        # --- MAIN SPLIT CONTAINERS ---
+        # Left: Controls
+        self.left_wing = ctk.CTkFrame(self, fg_color="transparent")
+        self.left_wing.pack(side="left", fill="both", expand=True, padx=(20, 10), pady=20)
+
+        # Right: Log
+        self.right_wing = ctk.CTkFrame(self, fg_color="transparent")
+        self.right_wing.pack(side="right", fill="both", expand=True, padx=(10, 20), pady=20)
+
+        # --- LEFT WING CONTENT (Settings) ---
+        self.header_label = ctk.CTkLabel(self.left_wing, text="CLAWNSEEKER", font=("Impact", 28), text_color=self.accent_color)
+        self.header_label.pack(pady=(0, 15), anchor="w")
+
+        # Scrollable area for settings to keep it tidy
+        self.settings_scroll = ctk.CTkScrollableFrame(self.left_wing, fg_color="transparent", width=380, height=350)
+        self.settings_scroll.pack(fill="both", expand=True)
+
+        # Profile Card
+        self.profile_card = self.create_card(self.settings_scroll, "MAP PROFILE")
+        map_mgmt_frame = ctk.CTkFrame(self.profile_card, fg_color="transparent")
+        map_mgmt_frame.pack(pady=10, fill="x", padx=10)
+
+        self.map_dropdown = ctk.CTkComboBox(
+            map_mgmt_frame, values=list(self.config_data["maps"].keys()), 
+            command=self.on_map_change, height=35, border_color="#444444",
+            button_color=self.accent_color, fg_color="#121212", state="readonly"
+        )
+        self.map_dropdown.pack(side="left", padx=(0, 5), expand=True, fill="x")
+        self.map_dropdown.set(self.config_data.get("last_selected_map", "default"))
+
+        self.btn_add_map = ctk.CTkButton(map_mgmt_frame, text="＋", width=35, height=35, fg_color="#2ecc71", command=self.add_new_map)
+        self.btn_add_map.pack(side="left", padx=2)
+        
+        self.btn_del_map = ctk.CTkButton(map_mgmt_frame, text="－", width=35, height=35, fg_color="#e74c3c", command=self.delete_map)
+        self.btn_del_map.pack(side="left", padx=2)
+
+        # Primary Settings Card
+        self.primary_card = self.create_card(self.settings_scroll, "HARDWARE PARAMETERS")
+        self.entry_key = ctk.CTkEntry(self.primary_card, placeholder_text="f3", border_color="#444444", justify="center", height=35)
+        self.entry_key.pack(pady=10, padx=20, fill="x")
+
+        delay_frame = ctk.CTkFrame(self.primary_card, fg_color="transparent")
+        delay_frame.pack(pady=5)
+        self.entry_min = self.create_labeled_entry(delay_frame, "MIN (s)", 0)
+        self.entry_max = self.create_labeled_entry(delay_frame, "MAX (s)", 1)
+
+        self.btn_save_map = ctk.CTkButton(self.primary_card, text="COMMIT TO PROFILE", font=("Arial", 11, "bold"),
+                                          fg_color="transparent", border_width=1, border_color=self.accent_color,
+                                          command=self.save_current_map_to_json)
+        self.btn_save_map.pack(pady=10, padx=20, fill="x")
+
+        # Cheer Card
+        self.sec_card = self.create_card(self.settings_scroll, "CHEER SEQUENCE")
+        self.check_secondary = ctk.CTkCheckBox(self.sec_card, text="ENABLE", command=self.toggle_secondary_ui, border_color=self.accent_color)
+        self.check_secondary.pack(pady=10)
+
+        sec_input_frame = ctk.CTkFrame(self.sec_card, fg_color="transparent")
+        sec_input_frame.pack(pady=(0, 10))
+        self.entry_key2 = ctk.CTkEntry(sec_input_frame, width=70, justify="center", placeholder_text="KEY")
+        self.entry_freq = ctk.CTkEntry(sec_input_frame, width=70, justify="center", placeholder_text="LOOPS")
+        self.entry_key2.grid(row=0, column=0, padx=5)
+        self.entry_freq.grid(row=0, column=1, padx=5)
+
+        # Big Launch Button (Bottom of Left Wing)
+        self.btn_toggle = ctk.CTkButton(self.left_wing, text="INITIALIZE SERVICE", fg_color=self.accent_color, 
+                                        height=55, font=("Arial", 16, "bold"), command=self.on_toggle)
+        self.btn_toggle.pack(pady=(15, 0), fill="x")
+
+        # --- RIGHT WING CONTENT (The Big Log) ---
+        ctk.CTkLabel(self.right_wing, text="SYSTEM ACTIVITY STREAM", font=("Arial", 11, "bold"), text_color=self.accent_color).pack(anchor="w", pady=(0, 10))
+        
+        self.log_window = ctk.CTkTextbox(
+            self.right_wing, 
+            font=("Consolas", 12), 
+            fg_color="#000000", 
+            text_color="#00ff00", 
+            border_width=1, 
+            border_color="#333333"
+        )
+        self.log_window.pack(fill="both", expand=True)
+        self.log_window.configure(state="disabled")
+
+        # Load initial values
+        self.load_map_values(self.map_dropdown.get())
+        self.toggle_secondary_ui()
+
+    # --- UI HELPERS ---
+    def create_card(self, parent, title):
+        frame = ctk.CTkFrame(parent, fg_color=self.card_color, corner_radius=12)
+        frame.pack(fill="x", pady=8, padx=5)
+        ctk.CTkLabel(frame, text=title, font=("Arial", 10, "bold"), text_color=self.accent_color).pack(pady=(10, 0))
+        return frame
+
+    def create_labeled_entry(self, parent, label, col):
+        ctk.CTkLabel(parent, text=label, font=("Arial", 10, "bold"), text_color=self.text_dim).grid(row=0, column=col)
+        entry = ctk.CTkEntry(parent, width=100, border_color="#444444", justify="center")
+        entry.grid(row=1, column=col, padx=10, pady=5)
+        return entry
+
+    # --- LOGIC METHODS ---
+    def add_new_map(self):
+        dialog = ctk.CTkInputDialog(text="Enter New Map Name:", title="Profile Creation")
+        name = dialog.get_input()
+        if name and name.strip():
+            name = name.strip()
+            self.config_data["maps"][name] = {
+                "key": self.entry_key.get(),
+                "min_delay": float(self.entry_min.get() or 8.1),
+                "max_delay": float(self.entry_max.get() or 8.7)
+            }
+            save_config(self.config_data)
+            self.map_dropdown.configure(values=list(self.config_data["maps"].keys()))
+            self.map_dropdown.set(name)
+            self.log(f"NEW PROFILE: {name}")
+
+    def delete_map(self):
+        current_map = self.map_dropdown.get()
+        if len(self.config_data["maps"]) > 1:
+            del self.config_data["maps"][current_map]
+            new_list = list(self.config_data["maps"].keys())
+            self.map_dropdown.configure(values=new_list)
+            self.map_dropdown.set(new_list[0])
+            self.load_map_values(new_list[0])
+            save_config(self.config_data)
+            self.log(f"REMOVED: {current_map}")
+
+    def on_map_change(self, map_name):
+        self.load_map_values(map_name)
+        self.log(f"MOUNTED: {map_name}")
+
+    def load_map_values(self, map_name):
+        map_data = self.config_data["maps"].get(map_name, {})
+        self.entry_key.delete(0, "end")
+        self.entry_key.insert(0, map_data.get("key", "f3"))
+        self.entry_min.delete(0, "end")
+        self.entry_min.insert(0, str(map_data.get("min_delay", 8.1)))
+        self.entry_max.delete(0, "end")
+        self.entry_max.insert(0, str(map_data.get("max_delay", 8.7)))
+
+    def save_current_map_to_json(self):
+        map_name = self.map_dropdown.get()
+        try:
+            self.config_data["maps"][map_name] = {
+                "key": self.entry_key.get().strip().lower(),
+                "min_delay": float(self.entry_min.get()),
+                "max_delay": float(self.entry_max.get())
+            }
+            save_config(self.config_data)
+            self.log(f"UPDATED: {map_name}")
+        except ValueError:
+            self.log("ERROR: INVALID DATA")
+
+    def toggle_secondary_ui(self):
+        state = "normal" if self.check_secondary.get() == 1 else "disabled"
+        self.entry_key2.configure(state=state)
+        self.entry_freq.configure(state=state)
+
+    def log(self, message):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        self.log_window.configure(state="normal")
+        self.log_window.insert("end", f"> {timestamp} | {message}\n")
+        self.log_window.see("end")
+        self.log_window.configure(state="disabled")
+
+    def on_toggle(self):
+        try:
+            settings = {
+                "key": self.entry_key.get().strip().lower(),
+                "min_delay": float(self.entry_min.get()),
+                "max_delay": float(self.entry_max.get()),
+                "use_secondary": bool(self.check_secondary.get()),
+                "key2": self.entry_key2.get().strip().lower() or "f4",
+                "freq": int(self.entry_freq.get() or 4)
+            }
+            is_running = self.controller.toggle_bot(settings)
+            self.btn_toggle.configure(
+                text="TERMINATE SERVICE" if is_running else "INITIALIZE SERVICE",
+                fg_color="#943126" if is_running else self.accent_color
+            )
+        except ValueError:
+            self.log("ERROR: CHECK DELAY NUMBERS")
