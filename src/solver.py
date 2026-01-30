@@ -8,7 +8,7 @@ from PIL import Image
 
 class CaptchaEngine:
     def __init__(self):
-        self.reader = easyocr.Reader(['en'], gpu=False)
+        self.reader = easyocr.Reader(['en'], gpu=True)
         self.log_dir = "logs"
         self.img_log_dir = "logs/captures"
         if not os.path.exists(self.img_log_dir): os.makedirs(self.img_log_dir)

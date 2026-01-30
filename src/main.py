@@ -13,114 +13,101 @@ class AppController:
         self.scanner = ScreenScanner()
         self.input_engine = InputEngine()
         self.solver = None 
+        self.is_running = False
         self.gui = HIDConfigurator(self)
         
-        # Start the engine loading in the background
         threading.Thread(target=self.initialize_engine, daemon=True).start()
 
     def initialize_engine(self):
-        """Loads the OCR models without locking the GUI."""
         try:
             self.gui.progress_bar.set(0.2)
-            self.gui.after(0, lambda: self.gui.status_label.configure(text="Status: Loading OCR Models..."))
+            self.gui.after(0, lambda: self.gui.status_label.configure(text="Status: Loading OCR..."))
             
-            from src.solver import CaptchaEngine
             self.solver = CaptchaEngine()
             
             self.gui.progress_bar.set(1.0)
             self.gui.after(0, lambda: self.gui.status_label.configure(text="Status: System Ready", text_color="green"))
-            self.gui.log("✅ Engine Loaded Successfully.")
+            self.gui.log("✅ Engine Loaded.")
             
-            # Turn off the progress bar after a delay
             time.sleep(2)
             self.gui.progress_bar.pack_forget() 
-            
         except Exception as e:
-            self.gui.status_label.configure(text="Status: Load Failed", text_color="red")
+            self.gui.after(0, lambda: self.gui.status_label.configure(text="Status: Load Failed", text_color="red"))
             self.gui.log(f"❌ Engine Error: {e}")
 
     def toggle_automation(self, settings):
-        """Called by the Start/Stop button in GUI."""
-        if not hasattr(self, 'is_running'):
-            self.is_running = False
-
         if not self.is_running:
             self.is_running = True
-            
             self.config_data.update(settings)
             
-            self.gui.log("🚀 STARTING AUTOMATION ENGINE")
-            self.gui.log(f"📡 WATCHING PIXEL: [836, 605] | COLOR: #F7DD20")
-            
+            self.gui.log("🚀 SERVICE STARTED")
             self.automation_thread = threading.Thread(target=self.core_loop, daemon=True)
             self.automation_thread.start()
         else:
             self.is_running = False
-            self.gui.log("🛑 AUTOMATION STOPPED")
+            self.gui.log("🛑 SERVICE STOPPED")
             
         return self.is_running
 
     def core_loop(self):
-        self.is_running = True
-        
-        # Pull settings from the dictionary passed by the GUI
-        primary_key = self.config_data.get("key", "f3")
-        min_d = self.config_data.get("min_delay", 8.1)
-        max_d = self.config_data.get("max_delay", 8.7)
-        
-        target_x, target_y = 835, 680
-        target_color = "#CC9B12"
+        TARGET_X, TARGET_Y = 835, 680
+        TARGET_COLOR = "#CC9B12"
+        loop_count = 0  # Initialize the counter
 
         while self.is_running:
             try:
-                # --- TASK 1: THE PIXEL WATCHER ---
-                if self.scanner.check_pixel_color(target_x, target_y, target_color, tolerance=25):
-                    self.gui.log("🎯 CAPTCHA DETECTED - Pausing Service...")
-                    
-                    # Capture and Solve
-                    self.gui.log("1...")
+                # 1. Check for Captcha
+                if self.scanner.check_pixel_color(TARGET_X, TARGET_Y, TARGET_COLOR, tolerance=25):
+                    self.gui.log("🎯 CAPTCHA DETECTED")
                     cap = self.config_data.get("capture_settings", {"x": 815, "y": 530, "w": 288, "h": 70})
-                    self.gui.log("2...")
                     frame = self.scanner.capture_region(cap['x'], cap['y'], cap['w'], cap['h'])
-                    self.gui.log("3...")
                     captcha_text = self.solver.solve(frame)
-                    self.gui.log("4...")
                     
                     if captcha_text:
-                        self.gui.log("Typing now...")
                         self.handle_captcha_sequence(captcha_text)
                         time.sleep(5)
                     continue
 
-                # --- TASK 2: THE PRIMARY ACTION ---
-                delay_ms = self.input_engine.simulate_press(primary_key, min_d, max_d)
+                # 2. Perform Primary Game Action
+                primary_key = self.config_data.get("key", "f3")
+                min_d = float(self.config_data.get("min_delay", 8.1))
+                max_d = float(self.config_data.get("max_delay", 8.7))
                 
-                self.gui.log(f"⚔️ Action: {primary_key} | Delay: {delay_ms}ms")
+                delay_ms = self.input_engine.simulate_press(primary_key, min_d, max_d)
+                self.gui.log(f"⚔️ {primary_key.upper()} | {delay_ms}ms")
+                
+                # 3. Handle Secondary Key (Cheer/Buff)
+                if self.config_data.get("use_secondary", False):
+                    loop_count += 1
+                    target_freq = int(self.config_data.get("freq", 4))
+                    
+                    if loop_count >= target_freq:
+                        sec_key = self.config_data.get("key2", "f4")
+                        self.gui.log(f"🌟 Cheer used: {sec_key.upper()}")
+                        # Brief pause before secondary to look more human
+                        time.sleep(random.uniform(0.5, 1.2))
+                        self.input_engine.simulate_press(sec_key, 0.1, 0.3)
+                        loop_count = 0 # Reset counter
 
             except Exception as e:
-                self.gui.log(f"⚠️ Input Error: {e}")
+                self.gui.log(f"⚠️ Loop Error: {e}")
                 time.sleep(1)
 
     def handle_captcha_sequence(self, text):
-        """Stealthy input sequence using the Interception driver."""
         try:
-            # A. Simulate 'Reaction Time'
             time.sleep(random.uniform(1.5, 3.5))
-            self.gui.log(f"⌨️ Typing via Driver: {text}")
+            self.gui.log(f"⌨️ Typing: {text}")
             
-            # Ensure text is lowercase as most game drivers prefer char-by-char
             for char in text.lower():
-                # We use a very short delay for typing speed
-                # Note: simulate_press handles the key_down and key_up
                 self.input_engine.simulate_press(char, 0.05, 0.15)
+                time.sleep(random.uniform(0.05, 0.1))
                 
-            # C. Press Enter to submit
             time.sleep(random.uniform(0.5, 1.0))
             self.input_engine.simulate_press('enter', 0.1, 0.2)
-            self.gui.log("✅ Captcha Submitted")
+            self.gui.log("✅ Submitted")
             
         except Exception as e:
-            self.gui.log(f"❌ Typing Error: {e}")
+            self.gui.log(f"❌ Input Error: {e}")
 
     def run(self):
         self.gui.mainloop()
