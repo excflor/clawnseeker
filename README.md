@@ -1,4 +1,4 @@
-# 🦅 ClawnSeeker // Dashboard
+# 🦅 ClawnSeeker
 
 **ClawnSeeker** is a high-performance, low-level hardware emulation dashboard built for Windows. It utilizes a dedicated driver-level interaction layer to simulate human-like HID (Human Interface Device) inputs with micro-precision.
 

@@ -2,9 +2,9 @@
     "last_selected_map": "default",
     "maps": {
         "default": {
-            "key": "f3",
-            "min_delay": 8.1,
-            "max_delay": 8.8
+            "key": "a",
+            "min_delay": 1.0,
+            "max_delay": 2.0
         },
         "metal": {
             "key": "f3",
