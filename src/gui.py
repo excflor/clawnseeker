@@ -9,28 +9,31 @@ class HIDConfigurator(ctk.CTk):
         self.scanner = ScreenScanner()
         self.controller = controller
         self.title("CLAWNSEEKER // DASHBOARD")
-        
-        # Wider, shorter geometry for desktop use
-        self.geometry("900x600")
+        self.geometry("950x650") # Slightly larger for better breathing room
         
         # Color Palette
         self.accent_color = "#1f6aa5" 
-        self.bg_color = "#1a1a1a"      
-        self.card_color = "#252525"    
+        self.bg_color = "#121212"      # Slightly darker for depth
+        self.card_color = "#1c1c1c"    # Card elevation
+        self.footer_color = "#181818"  # Subtle footer distinction
         self.text_dim = "#888888"      
         
         ctk.set_appearance_mode("dark")
         self.configure(fg_color=self.bg_color)
-
         self.config_data = load_config()
 
-        # --- MAIN SPLIT CONTAINERS ---
-        # Left: Controls
-        self.left_wing = ctk.CTkFrame(self, fg_color="transparent")
+        # --- TOP LEVEL CONTAINERS ---
+        self.main_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.main_container.pack(side="top", fill="both", expand=True)
+
+        self.footer_bar = ctk.CTkFrame(self, fg_color=self.footer_color, height=40, corner_radius=0)
+        self.footer_bar.pack(side="bottom", fill="x")
+
+        # --- MAIN SPLIT (Inside main_container) ---
+        self.left_wing = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.left_wing.pack(side="left", fill="both", expand=True, padx=(20, 10), pady=20)
 
-        # Right: Log
-        self.right_wing = ctk.CTkFrame(self, fg_color="transparent")
+        self.right_wing = ctk.CTkFrame(self.main_container, fg_color="transparent")
         self.right_wing.pack(side="right", fill="both", expand=True, padx=(10, 20), pady=20)
 
         # --- LEFT WING CONTENT (Settings) ---
@@ -140,15 +143,18 @@ class HIDConfigurator(ctk.CTk):
         self.log_window.pack(fill="both", expand=True)
         self.log_window.configure(state="disabled")
 
-        # --- Status & Progress Section ---
-        self.status_label = ctk.CTkLabel(self, text="Status: Initializing AI...", font=("Arial", 12))
-        self.status_label.pack(pady=(10, 0))
+        # --- FOOTER STATUS SECTION (Clean & Horizontal) ---
+        # 1. Main Status Text
+        self.status_label = ctk.CTkLabel(self.footer_bar, text="STATUS: READY", 
+                                         font=("Consolas", 11), text_color=self.text_dim)
+        self.status_label.pack(side="left", padx=(20, 10))
 
-        self.progress_bar = ctk.CTkProgressBar(self, width=300)
-        self.progress_bar.pack(pady=10)
-        self.progress_bar.set(0) # Start at 0%
+        self.progress_bar = ctk.CTkProgressBar(self.footer_bar, width=200, height=8, 
+                                               progress_color=self.accent_color)
+        self.progress_bar.pack(side="right", padx=20, pady=10)
+        self.progress_bar.set(0)
 
-        # Load initial values
+        # Initial Load
         self.load_map_values(self.map_dropdown.get())
         self.load_capture_settings()
         self.toggle_secondary_ui()
@@ -276,7 +282,7 @@ class HIDConfigurator(ctk.CTk):
                 "key2": self.entry_key2.get().strip().lower() or "f4",
                 "freq": int(self.entry_freq.get() or 4)
             }
-            is_running = self.controller.toggle_bot(settings)
+            is_running = self.controller.toggle_automation(settings)
             self.btn_toggle.configure(
                 text="TERMINATE SERVICE" if is_running else "INITIALIZE SERVICE",
                 fg_color="#943126" if is_running else self.accent_color

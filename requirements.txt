@@ -1,6 +1,8 @@
 customtkinter
 Pillow
-mss
+pyautogui        
 interception-python
 easyocr
 torch
+numpy              
+opencv-python
