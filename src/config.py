@@ -5,15 +5,21 @@ CONFIG_FILE = "settings.json"
 
 # Default profiles if no file exists
 DEFAULT_DATA = {
-    "last_selected_map": "Verdandi",
+    "last_selected_map": "verdandi",
     "maps": {
-        "Verdandi": {"key": "f3", "min_delay": 8.0, "max_delay": 9.0},
-        "Asgard": {"key": "f1", "min_delay": 5.0, "max_delay": 6.0}
+        "verdandi": {"key": "f3", "min_delay": 8.0, "max_delay": 9.0},
+        "asgard": {"key": "f1", "min_delay": 5.0, "max_delay": 6.0}
     },
     "secondary": {
         "use_secondary": False,
         "key2": "f4",
         "freq": 4
+    },
+    "capture_settings": {
+        "x": 815,
+        "y": 530,
+        "w": 288,
+        "h": 70
     }
 }
 

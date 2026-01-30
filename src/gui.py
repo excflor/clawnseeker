@@ -1,10 +1,12 @@
 import customtkinter as ctk
 from datetime import datetime
 from src.config import load_config, save_config
+from src.capture import ScreenScanner
 
 class HIDConfigurator(ctk.CTk):
     def __init__(self, controller):
         super().__init__()
+        self.scanner = ScreenScanner()
         self.controller = controller
         self.title("CLAWNSEEKER // DASHBOARD")
         
@@ -85,6 +87,40 @@ class HIDConfigurator(ctk.CTk):
         self.entry_key2.grid(row=0, column=0, padx=5)
         self.entry_freq.grid(row=0, column=1, padx=5)
 
+        self.capture_card = self.create_card(self.settings_scroll, "VISUAL CAPTURE ZONE")
+
+        cap_grid = ctk.CTkFrame(self.capture_card, fg_color="transparent")
+        cap_grid.pack(pady=10)
+
+        # X and Y coordinates
+        ctk.CTkLabel(cap_grid, text="X pos").grid(row=0, column=0)
+        self.entry_x = ctk.CTkEntry(cap_grid, width=60, placeholder_text="0")
+        self.entry_x.grid(row=1, column=0, padx=5)
+
+        ctk.CTkLabel(cap_grid, text="Y pos").grid(row=0, column=1)
+        self.entry_y = ctk.CTkEntry(cap_grid, width=60, placeholder_text="0")
+        self.entry_y.grid(row=1, column=1, padx=5)
+
+        # Width and Height
+        ctk.CTkLabel(cap_grid, text="Width").grid(row=2, column=0, pady=(5,0))
+        self.entry_w = ctk.CTkEntry(cap_grid, width=60, placeholder_text="100")
+        self.entry_w.grid(row=3, column=0, padx=5)
+
+        ctk.CTkLabel(cap_grid, text="Height").grid(row=2, column=1, pady=(5,0))
+        self.entry_h = ctk.CTkEntry(cap_grid, width=60, placeholder_text="100")
+        self.entry_h.grid(row=3, column=1, padx=5)
+
+        # Test Button
+        self.btn_test_cap = ctk.CTkButton(
+            self.capture_card, 
+            text="TEST CAPTURE & LOG", 
+            fg_color="transparent", 
+            border_width=1, 
+            border_color="#f39c12",
+            command=self.test_screen_capture
+        )
+        self.btn_test_cap.pack(pady=10, padx=20, fill="x")
+
         # Big Launch Button (Bottom of Left Wing)
         self.btn_toggle = ctk.CTkButton(self.left_wing, text="INITIALIZE SERVICE", fg_color=self.accent_color, 
                                         height=55, font=("Arial", 16, "bold"), command=self.on_toggle)
@@ -106,6 +142,7 @@ class HIDConfigurator(ctk.CTk):
 
         # Load initial values
         self.load_map_values(self.map_dropdown.get())
+        self.load_capture_settings()
         self.toggle_secondary_ui()
 
     # --- UI HELPERS ---
@@ -147,6 +184,41 @@ class HIDConfigurator(ctk.CTk):
             self.load_map_values(new_list[0])
             save_config(self.config_data)
             self.log(f"REMOVED: {current_map}")
+
+    def load_capture_settings(self):
+        # 1. Safely grab the settings (providing defaults if missing)
+        cap = self.config_data.get("capture_settings", {"x": 815, "y": 530, "w": 288, "h": 70})
+        
+        # 2. Clear and Insert for each field
+        self.entry_x.delete(0, "end")
+        self.entry_x.insert(0, str(cap['x']))
+        
+        self.entry_y.delete(0, "end")
+        self.entry_y.insert(0, str(cap['y']))
+        
+        self.entry_w.delete(0, "end")
+        self.entry_w.insert(0, str(cap['w']))
+        
+        self.entry_h.delete(0, "end")
+        self.entry_h.insert(0, str(cap['h']))
+
+    def test_screen_capture(self):
+        try:
+            # 1. Get current values from GUI
+            x, y = int(self.entry_x.get()), int(self.entry_y.get())
+            w, h = int(self.entry_w.get()), int(self.entry_h.get())
+            
+            # 2. Update config_data and Save to JSON
+            self.config_data["capture_settings"] = {"x": x, "y": y, "w": w, "h": h}
+            save_config(self.config_data)
+            
+            # 3. Capture and Save Image
+            img = self.scanner.capture_region(x, y, w, h)
+            saved_path = self.scanner.save_debug_image(img)
+            
+            self.log(f"SAVED: Settings & {saved_path}")
+        except Exception as e:
+            self.log(f"CAPTURE ERROR: {e}")
 
     def on_map_change(self, map_name):
         self.load_map_values(map_name)

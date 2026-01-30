@@ -11,5 +11,11 @@
             "min_delay": 8.0,
             "max_delay": 9.0
         }
+    },
+    "capture_settings": {
+        "x": 815,
+        "y": 530,
+        "w": 288,
+        "h": 70
     }
 }
