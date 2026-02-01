@@ -1,15 +1,15 @@
 {
-    "last_selected_map": "default",
+    "last_selected_map": "underground",
     "maps": {
         "default": {
             "key": "a",
             "min_delay": 1.0,
             "max_delay": 2.0
         },
-        "metal": {
-            "key": "f3",
-            "min_delay": 8.0,
-            "max_delay": 9.0
+        "underground": {
+            "key": "3",
+            "min_delay": 9.4,
+            "max_delay": 9.6
         }
     },
     "capture_settings": {
@@ -17,5 +17,8 @@
         "y": 530,
         "w": 288,
         "h": 70
-    }
+    },
+    "use_secondary": false,
+    "key2": "f4",
+    "freq": 4
 }
