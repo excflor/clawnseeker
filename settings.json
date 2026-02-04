@@ -19,6 +19,15 @@
         "h": 70
     },
     "use_secondary": false,
-    "key2": "f4",
-    "freq": 4
+    "key2": "",
+    "freq": 0,
+    "key": "3",
+    "min_delay": 9.4,
+    "max_delay": 9.6,
+    "tab_wait": "0.7-1.0",
+    "click_settings": {
+        "enabled": true,
+        "x": 352,
+        "y": 194
+    }
 }

@@ -1,4 +1,6 @@
 import customtkinter as ctk
+import ctypes
+from ctypes import windll, Structure, c_long, byref
 from datetime import datetime
 import time
 from src.config import load_config, save_config
@@ -95,16 +97,74 @@ class HIDConfigurator(ctk.CTk):
         self.entry_key2 = self.create_labeled_entry(sf_btm, "KEY", 0, width=90)
         self.entry_freq = self.create_labeled_entry(sf_btm, "LOOPS", 1, width=90)
 
-        # Capture Zone
-        cap_card = self.create_card(self.center_panel, "VISUAL CAPTURE ZONE")
+        # Capture & Interaction Zone
+        cap_card = self.create_card(self.center_panel, "VISUAL & INTERACTION")
+        
+        # Capture Config
         cf = ctk.CTkFrame(cap_card, fg_color="transparent")
-        cf.pack(fill="x", padx=10, pady=10)
-        self.entry_x = self.create_labeled_entry(cf, "X", 0, width=55)
-        self.entry_y = self.create_labeled_entry(cf, "Y", 1, width=55)
-        self.entry_w = self.create_labeled_entry(cf, "W", 2, width=55)
-        self.entry_h = self.create_labeled_entry(cf, "H", 3, width=55)
-        ctk.CTkButton(cap_card, text="TEST VISUAL SCAN", fg_color="#1a1a1a", border_width=1, 
-                      border_color=self.border_color, command=self.test_screen_capture).pack(pady=10, padx=15, fill="x")
+        cf.pack(fill="x", padx=10, pady=(10, 5))
+        ctk.CTkLabel(cf, text="CAPTURE ZONE:", font=("Consolas", 10, "bold"), text_color=self.text_dim).pack(anchor="w", padx=5)
+        
+        cf_in = ctk.CTkFrame(cf, fg_color="transparent")
+        cf_in.pack(fill="x")
+        self.entry_x = self.create_labeled_entry(cf_in, "X", 0, width=50)
+        self.entry_y = self.create_labeled_entry(cf_in, "Y", 1, width=50)
+        self.entry_w = self.create_labeled_entry(cf_in, "W", 2, width=50)
+        self.entry_h = self.create_labeled_entry(cf_in, "H", 3, width=50)
+
+        # Click Config (Before)
+        cl_f = ctk.CTkFrame(cap_card, fg_color="transparent")
+        cl_f.pack(fill="x", padx=10, pady=5)
+        ctk.CTkLabel(cl_f, text="CLICK (BEFORE):", font=("Consolas", 10, "bold"), text_color=self.text_dim).pack(anchor="w", padx=5)
+        
+        cl_in = ctk.CTkFrame(cl_f, fg_color="transparent")
+        cl_in.pack(fill="x")
+        self.check_click = ctk.CTkCheckBox(cl_in, text="ENABLE", font=("Consolas", 10), width=60)
+        self.check_click.grid(row=0, column=0, padx=5, sticky="w")
+        
+        self.entry_cx = self.create_labeled_entry(cl_in, "CX", 1, width=50)
+        self.entry_cy = self.create_labeled_entry(cl_in, "CY", 2, width=50)
+
+        # Click Config (After)
+        cl_f2 = ctk.CTkFrame(cap_card, fg_color="transparent")
+        cl_f2.pack(fill="x", padx=10, pady=5)
+        ctk.CTkLabel(cl_f2, text="CLICK (AFTER):", font=("Consolas", 10, "bold"), text_color=self.text_dim).pack(anchor="w", padx=5)
+        
+        cl_in2 = ctk.CTkFrame(cl_f2, fg_color="transparent")
+        cl_in2.pack(fill="x")
+        self.check_click2 = ctk.CTkCheckBox(cl_in2, text="ENABLE", font=("Consolas", 10), width=60)
+        self.check_click2.grid(row=0, column=0, padx=5, sticky="w")
+        
+        self.entry_cx2 = self.create_labeled_entry(cl_in2, "CX", 1, width=50)
+        self.entry_cy2 = self.create_labeled_entry(cl_in2, "CY", 2, width=50)
+
+        # Tools
+        tf = ctk.CTkFrame(cap_card, fg_color="transparent")
+        tf.pack(fill="x", padx=10, pady=10)
+        
+        # Row 1 Tools
+        r1 = ctk.CTkFrame(tf, fg_color="transparent")
+        r1.pack(fill="x", pady=2)
+        self.btn_get_pos = ctk.CTkButton(r1, text="GET POS 1 (3s)", width=80, height=24, font=("Consolas", 9), 
+                                         fg_color="#1a1a1a", border_width=1, border_color=self.border_color, 
+                                         command=lambda: self.start_get_pos(1))
+        self.btn_get_pos.pack(side="left", padx=2, expand=True)
+        
+        ctk.CTkButton(r1, text="TEST CLICK 1", width=80, height=24, font=("Consolas", 9), 
+                      fg_color="#1a1a1a", border_width=1, border_color=self.border_color, 
+                      command=lambda: self.test_click_action(1)).pack(side="left", padx=2, expand=True)
+
+        # Row 2 Tools
+        r2 = ctk.CTkFrame(tf, fg_color="transparent")
+        r2.pack(fill="x", pady=2)
+        self.btn_get_pos2 = ctk.CTkButton(r2, text="GET POS 2 (3s)", width=80, height=24, font=("Consolas", 9), 
+                                         fg_color="#1a1a1a", border_width=1, border_color=self.border_color, 
+                                         command=lambda: self.start_get_pos(2))
+        self.btn_get_pos2.pack(side="left", padx=2, expand=True)
+        
+        ctk.CTkButton(r2, text="TEST CLICK 2", width=80, height=24, font=("Consolas", 9), 
+                      fg_color="#1a1a1a", border_width=1, border_color=self.border_color, 
+                      command=lambda: self.test_click_action(2)).pack(side="left", padx=2, expand=True)
 
         # 3. RIGHT PANEL (Logs)
         self.right_panel = ctk.CTkFrame(self, fg_color="transparent")
@@ -162,6 +222,20 @@ class HIDConfigurator(ctk.CTk):
         for entry, val in zip([self.entry_x, self.entry_y, self.entry_w, self.entry_h], [cap['x'], cap['y'], cap['w'], cap['h']]):
             entry.delete(0, "end")
             entry.insert(0, str(val))
+            
+        click = self.config_data.get("click_settings", {"enabled": False, "x": 0, "y": 0})
+        self.check_click.select() if click.get("enabled") else self.check_click.deselect()
+        self.entry_cx.delete(0, "end")
+        self.entry_cx.insert(0, str(click.get("x", 0)))
+        self.entry_cy.delete(0, "end")
+        self.entry_cy.insert(0, str(click.get("y", 0)))
+
+        click2 = self.config_data.get("click_settings_2", {"enabled": False, "x": 0, "y": 0})
+        self.check_click2.select() if click2.get("enabled") else self.check_click2.deselect()
+        self.entry_cx2.delete(0, "end")
+        self.entry_cx2.insert(0, str(click2.get("x", 0)))
+        self.entry_cy2.delete(0, "end")
+        self.entry_cy2.insert(0, str(click2.get("y", 0)))
 
     def on_map_change(self, name):
         self.load_map_values(name)
@@ -204,12 +278,48 @@ class HIDConfigurator(ctk.CTk):
             self.map_dropdown.set(new_list[0])
             self.load_map_values(new_list[0])
 
-    def test_screen_capture(self):
+
+
+    def start_get_pos(self, target_id):
+        btn = self.btn_get_pos if target_id == 1 else self.btn_get_pos2
+        btn.configure(text="MOVE NOW...", fg_color="#e74c3c")
+        self.after(3000, lambda: self.finish_get_pos(target_id))
+
+    class POINT(Structure):
+        _fields_ = [("x", c_long), ("y", c_long)]
+
+    def finish_get_pos(self, target_id):
         try:
-            x, y, w, h = [int(e.get()) for e in [self.entry_x, self.entry_y, self.entry_w, self.entry_h]]
-            img = self.scanner.capture_region(x, y, w, h)
-            self.log(f"SCAN SUCCESS: {w}x{h} at {x},{y}")
-        except Exception as e: self.log(f"SCAN ERROR: {e}")
+            pt = self.POINT()
+            windll.user32.GetCursorPos(byref(pt))
+            x, y = pt.x, pt.y
+            
+            ex = self.entry_cx if target_id == 1 else self.entry_cx2
+            ey = self.entry_cy if target_id == 1 else self.entry_cy2
+            
+            ex.delete(0, "end")
+            ex.insert(0, str(x))
+            ey.delete(0, "end")
+            ey.insert(0, str(y))
+            self.log(f"POS {target_id} CAPTURED: {x}, {y}")
+        except Exception as e:
+            self.log(f"POS ERROR: {e}")
+        finally:
+            btn = self.btn_get_pos if target_id == 1 else self.btn_get_pos2
+            btn.configure(text=f"GET POS {target_id} (3s)", fg_color="#1a1a1a")
+
+    def test_click_action(self, target_id):
+        try:
+            ex = self.entry_cx if target_id == 1 else self.entry_cx2
+            ey = self.entry_cy if target_id == 1 else self.entry_cy2
+            x = int(ex.get())
+            y = int(ey.get())
+            self.log(f"TESTING CLICK {target_id}: {x}, {y}")
+            self.controller.input_engine.move_to(x, y)
+            time.sleep(0.2)
+            self.controller.input_engine.click()
+        except Exception as e:
+            self.log(f"CLICK ERROR: {e}")
 
     def log(self, msg):
         ts = datetime.now().strftime("%H:%M:%S")
@@ -226,7 +336,19 @@ class HIDConfigurator(ctk.CTk):
             "use_secondary": bool(self.check_secondary.get()),
             "key2": self.entry_key2.get(),
             "freq": int(self.entry_freq.get() or 0),
-            "tab_wait": self.entry_tab_wait.get()
+            "tab_wait": self.entry_tab_wait.get(),
+            "capture_settings": {
+                "x": int(self.entry_x.get()), "y": int(self.entry_y.get()),
+                "w": int(self.entry_w.get()), "h": int(self.entry_h.get())
+            },
+            "click_settings": {
+                "enabled": bool(self.check_click.get()),
+                "x": int(self.entry_cx.get()), "y": int(self.entry_cy.get())
+            },
+            "click_settings_2": {
+                "enabled": bool(self.check_click2.get()),
+                "x": int(self.entry_cx2.get()), "y": int(self.entry_cy2.get())
+            }
         }
         active = self.controller.toggle_automation(settings)
         self.btn_toggle.configure(text="STOP SERVICE" if active else "INITIALIZE SERVICE", fg_color="#7f1d1d" if active else self.accent)

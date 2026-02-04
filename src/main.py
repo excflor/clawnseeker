@@ -113,16 +113,38 @@ class AppController:
 
     def handle_captcha_sequence(self, text):
         try:
+            # Auto-Click Logic
+            click_cfg = self.config_data.get("click_settings", {})
+            if click_cfg.get("enabled"):
+                cx = click_cfg.get("x", 0)
+                cy = click_cfg.get("y", 0)
+                self.gui.log(f"🖱️ CLICKING: {cx}, {cy}")
+                self.input_engine.move_to(cx, cy)
+                time.sleep(random.uniform(0.15, 0.3))
+                self.input_engine.click()
+                time.sleep(random.uniform(0.5, 1.0))
+
             time.sleep(random.uniform(1.5, 3.5))
             self.gui.log(f"⌨️ TYPING CAPTCHA: {text}")
             
-            for char in text.lower():
+            for char in text:
                 self.input_engine.simulate_press(char, 0.05, 0.15)
                 time.sleep(random.uniform(0.05, 0.1))
                 
             time.sleep(random.uniform(0.5, 1.0))
             self.input_engine.simulate_press('enter', 0.1, 0.2)
             self.gui.log("✅ CAPTCHA SUBMITTED")
+
+            # Auto-Click 2 Logic (After)
+            click2_cfg = self.config_data.get("click_settings_2", {})
+            if click2_cfg.get("enabled"):
+                time.sleep(random.uniform(0.8, 1.5)) # Wait for submit processing
+                cx = click2_cfg.get("x", 0)
+                cy = click2_cfg.get("y", 0)
+                self.gui.log(f"🖱️ CLICK 2: {cx}, {cy}")
+                self.input_engine.move_to(cx, cy)
+                time.sleep(random.uniform(0.15, 0.3))
+                self.input_engine.click()
             
         except Exception as e:
             self.gui.log(f"❌ Input Error: {e}")
